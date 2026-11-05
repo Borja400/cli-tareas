@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "acciones": [
+    {
+      "nombre": "mover-entregas",
+      "descripcion": "Mueve los PDF y DOCX de Descargas que parezcan entregas o tareas a Documentos/DAM/Entregas",
+      "tipo": "mover",
+      "origen": "~/Descargas",
+      "filtro": {
+        "extensiones": [".pdf", ".docx"],
+        "patron": "(?i)(entrega|tarea|pr[aá]ctica)"
+      },
+      "destino": "~/Documentos/DAM/Entregas"
+    },
+    {
+      "nombre": "renombrar-escaneos",
+      "descripcion": "Renombra fotos y escaneos de apuntes con la fecha y un número",
+      "tipo": "renombrar",
+      "filtro": {
+        "patron": "(?i)^(img_|pxl_|scan)"
+      },
+      "plantilla": "{fecha:%Y-%m-%d}_{n:03}{ext}"
+    },
+    {
+      "nombre": "copiar-apuntes",
+      "descripcion": "Copia los PDF y DOCX de Apuntes a una carpeta de seguridad",
+      "tipo": "copiar",
+      "origen": "~/Documentos/Apuntes",
+      "filtro": {
+        "extensiones": [".pdf", ".docx"]
+      },
+      "destino": "~/Documentos/Copia-apuntes"
+    }
+  ]
+}
