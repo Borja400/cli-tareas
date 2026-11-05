@@ -1,7 +1,7 @@
 [project]
 name = "tareas"
 version = "0.1.0"
-description = "Add your description here"
+description = "Automatiza tareas repetitivas con ficheros desde la terminal"
 readme = "README.md"
 authors = [
     { name = "Borja Herreros", email = "borjaherreros6@gmail.com" }
