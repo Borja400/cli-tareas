@@ -5,7 +5,15 @@ build/
 dist/
 wheels/
 *.egg-info
+.pytest_cache/
 
 # Virtual environments
 .venv
+
+# Secretos: nunca se suben, pero sí el ejemplo sin claves
 .env
+.env.*
+!.env.example
+
+# Carpeta local de pruebas: no se sube al repositorio
+pruebas-tareas/
