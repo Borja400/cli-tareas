@@ -13,6 +13,16 @@
       "destino": "~/Documentos/DAM/Entregas"
     },
     {
+      "nombre": "mover-instaladores",
+      "descripcion": "Mueve los instaladores EXE y MSI de Descargas a una carpeta aparte",
+      "tipo": "mover",
+      "origen": "~/Descargas",
+      "filtro": {
+        "extensiones": [".exe", ".msi"]
+      },
+      "destino": "~/Descargas/Instaladores"
+    },
+    {
       "nombre": "renombrar-escaneos",
       "descripcion": "Renombra fotos y escaneos de apuntes con la fecha y un número",
       "tipo": "renombrar",
@@ -30,6 +40,15 @@
         "extensiones": [".pdf", ".docx"]
       },
       "destino": "~/Documentos/Copia-apuntes"
+    },
+    {
+      "nombre": "borrar-temporales",
+      "descripcion": "Borra los ficheros TMP de Descargas después de pedir confirmación",
+      "tipo": "borrar",
+      "origen": "~/Descargas",
+      "filtro": {
+        "extensiones": [".tmp"]
+      }
     }
   ]
 }

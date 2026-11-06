@@ -9,8 +9,8 @@ Construida con Python 3.12, Typer, Rich y `uv`, siguiendo el proyecto **CLI tare
 2. **Para quién:** para mí (Borja, 1.º DAM) y para cualquier estudiante que quiera ordenar sus ficheros desde la terminal.
 3. **Cómo se usa:** `tareas ORDEN [CARPETA] [opciones]` desde cualquier carpeta.
 4. **Órdenes de la semana 1:** `tareas --help`, `tareas version`, `tareas listar [CARPETA]`.
-5. **Órdenes previstas:** `tareas acciones`, `tareas validar`, `tareas ejecutar NOMBRE [CARPETA] --simular`, `tareas ejecutar NOMBRE [CARPETA] --si` y `tareas --config RUTA ...`.
-6. **Mis 3 acciones:** `mover-entregas`, `renombrar-escaneos` y `copiar-apuntes`.
+5. **Órdenes disponibles:** `tareas acciones`, `tareas validar`, `tareas ejecutar NOMBRE [CARPETA] --simular`, `tareas ejecutar NOMBRE [CARPETA] --si` y `tareas --config RUTA ...`.
+6. **Mis 5 acciones:** `mover-entregas`, `mover-instaladores`, `renombrar-escaneos`, `copiar-apuntes` y `borrar-temporales`.
 7. **Nunca hará:** borrar sin confirmación, tocar ficheros fuera de la carpeta indicada ni sobrescribir un fichero existente.
 8. **Plataformas:** Linux primero; también Windows y macOS.
 9. **Códigos de salida:** 0 bien · 1 fallo al ejecutar · 2 error de uso · 3 configuración inválida.
@@ -42,12 +42,42 @@ tareas listar "~/pruebas-tareas"
 tareas acciones
 tareas validar
 tareas ejecutar mover-entregas --simular
+tareas ejecutar mover-instaladores "~/pruebas-tareas/Descargas" --simular
 tareas ejecutar renombrar-escaneos "~/pruebas-tareas/fotos" --simular
+tareas ejecutar borrar-temporales "~/pruebas-tareas/Descargas" --simular
 tareas --config pruebas-tareas/acciones-pruebas.json validar
 ```
 
 `listar` muestra nombre, tipo (extensión o «carpeta»), tamaño legible y fecha de modificación.
 Las carpetas salen primero y después los ficheros por orden alfabético.
+
+## Acciones incluidas
+
+| Acción | Tipo | Qué hace |
+|---|---|---|
+| `mover-entregas` | `mover` | Mueve los PDF y DOCX de Descargas que parezcan entregas o tareas a `Documentos/DAM/Entregas`. |
+| `mover-instaladores` | `mover` | Mueve los `.exe` y `.msi` de Descargas a `Descargas/Instaladores`. |
+| `renombrar-escaneos` | `renombrar` | Renombra fotos y escaneos con la fecha y un número: `2026-11-06_001.jpg`. |
+| `copiar-apuntes` | `copiar` | Copia los PDF y DOCX de Apuntes a una carpeta de seguridad. |
+| `borrar-temporales` | `borrar` | Borra los `.tmp` de Descargas después de pedir confirmación. |
+
+Las rutas de `acciones.json` son un punto de partida: puedes cambiarlas sin tocar el código.
+Antes de ejecutar una acción destructiva, prueba siempre con `--simular`.
+
+## Pruebas
+
+La batería de pruebas usa `pytest` y carpetas temporales, así que nunca toca tus ficheros reales:
+
+```bash
+uv run pytest -q
+```
+
+| Fichero | Qué comprueba |
+|---|---|
+| `tests/test_config.py` | Carga del JSON, versión del esquema, campos obligatorios, filtros y errores. |
+| `tests/test_acciones.py` | Mover, copiar, renombrar y borrar; colisiones de nombres y `--simular`. |
+| `tests/test_motor.py` | Selección por extensión, patrón, antigüedad y tamaño; ejecución de acciones. |
+| `tests/test_cli.py` | Órdenes de Typer, códigos de salida, confirmación y cancelación del borrado. |
 
 ## Esquema de acciones.json
 
@@ -111,6 +141,7 @@ src/tareas/
   acciones.py      clases Mover, Copiar, Renombrar y Borrar
   motor.py         selecciona ficheros y ejecuta acciones
 acciones.json      mis acciones
+tests/             pruebas de config, acciones, motor y CLI con pytest
 docs/adr/          decisiones de arquitectura
 docs/prompts.md    prompts clave del proceso
 ```
