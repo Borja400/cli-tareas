@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from tareas.cli import app
@@ -40,6 +41,18 @@ def accion_borrar(origen: Path) -> dict:
     }
 
 
+class ProveedorFalso:
+    """Proveedor de IA que no llama a ninguna API."""
+
+    def __init__(self, respuesta: str = "Explicación de prueba.") -> None:
+        self.respuesta = respuesta
+        self.peticiones: list[str] = []
+
+    def explicar(self, peticion: str) -> str:
+        self.peticiones.append(peticion)
+        return self.respuesta
+
+
 def texto(resultado) -> str:
     """Une stdout y stderr, según la versión de Click."""
     return (resultado.output or "") + (getattr(resultado, "stderr", "") or "")
@@ -60,6 +73,7 @@ def test_ayuda() -> None:
     assert "listar" in salida
     assert "acciones" in salida
     assert "validar" in salida
+    assert "explicar" in salida
     assert "ejecutar" in salida
 
 
@@ -337,6 +351,147 @@ def test_ejecutar_carpeta_inexistente(tmp_path: Path) -> None:
             "mover-x",
             str(tmp_path / "no-existe"),
             "--simular",
+        ],
+    )
+
+    assert resultado.exit_code == 1
+    assert "no existe" in texto(resultado)
+
+
+def test_explicar_ok(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    origen = tmp_path / "origen"
+    destino = tmp_path / "destino"
+    origen.mkdir()
+    fichero = origen / "entrega.pdf"
+    fichero.write_text("contenido", encoding="utf-8")
+    config = escribir_config(
+        tmp_path, [accion_mover(origen, destino)]
+    )
+    proveedor = ProveedorFalso("Esta acción movería entrega.pdf a destino.")
+    monkeypatch.setattr("tareas.cli.crear_proveedor", lambda: proveedor)
+
+    resultado = runner.invoke(
+        app,
+        ["--config", str(config), "explicar", "mover-x", str(origen)],
+    )
+
+    assert resultado.exit_code == 0
+    salida = texto(resultado)
+    assert "Explicación de «mover-x»" in salida
+    assert "Esta acción movería" in salida
+    assert len(proveedor.peticiones) == 1
+    assert "entrega.pdf" in proveedor.peticiones[0]
+    assert "Plan calculado sin ejecutar" in proveedor.peticiones[0]
+    assert "entrega.pdf -> entrega.pdf" in proveedor.peticiones[0]
+    assert fichero.is_file()
+    assert fichero.read_text(encoding="utf-8") == "contenido"
+    assert not destino.exists()
+
+
+def test_explicar_tiene_en_cuenta_colisiones(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    origen = tmp_path / "origen"
+    destino = tmp_path / "destino"
+    origen.mkdir()
+    destino.mkdir()
+    fichero = origen / "entrega.pdf"
+    fichero.write_text("contenido", encoding="utf-8")
+    existente = destino / "entrega.pdf"
+    existente.write_text("otro", encoding="utf-8")
+    config = escribir_config(tmp_path, [accion_mover(origen, destino)])
+    proveedor = ProveedorFalso()
+    monkeypatch.setattr("tareas.cli.crear_proveedor", lambda: proveedor)
+
+    resultado = runner.invoke(
+        app,
+        ["--config", str(config), "explicar", "mover-x", str(origen)],
+    )
+
+    assert resultado.exit_code == 0
+    assert "entrega.pdf -> entrega (1).pdf" in proveedor.peticiones[0]
+    assert fichero.is_file()
+    assert existente.read_text(encoding="utf-8") == "otro"
+
+
+def test_explicar_sin_clave(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    origen = tmp_path / "origen"
+    origen.mkdir()
+    (origen / "entrega.pdf").write_text("contenido", encoding="utf-8")
+    config = escribir_config(
+        tmp_path, [accion_mover(origen, tmp_path / "destino")]
+    )
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+
+    resultado = runner.invoke(
+        app,
+        ["--config", str(config), "explicar", "mover-x", str(origen)],
+    )
+
+    assert resultado.exit_code == 3
+    assert "GEMINI_API_KEY" in texto(resultado)
+
+
+def test_explicar_sin_ficheros(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    origen = tmp_path / "origen"
+    origen.mkdir()
+    config = escribir_config(
+        tmp_path, [accion_mover(origen, tmp_path / "destino")]
+    )
+    proveedor = ProveedorFalso()
+    monkeypatch.setattr("tareas.cli.crear_proveedor", lambda: proveedor)
+
+    resultado = runner.invoke(
+        app,
+        ["--config", str(config), "explicar", "mover-x", str(origen)],
+    )
+
+    assert resultado.exit_code == 0
+    assert "Ningún fichero" in texto(resultado)
+    assert proveedor.peticiones == []
+
+
+def test_explicar_accion_inexistente(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    origen = tmp_path / "origen"
+    origen.mkdir()
+    config = escribir_config(
+        tmp_path, [accion_mover(origen, tmp_path / "destino")]
+    )
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+
+    resultado = runner.invoke(
+        app,
+        ["--config", str(config), "explicar", "no-existe", str(origen)],
+    )
+
+    assert resultado.exit_code == 1
+    assert "No hay ninguna acción" in texto(resultado)
+
+
+def test_explicar_carpeta_inexistente(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    origen = tmp_path / "origen"
+    origen.mkdir()
+    config = escribir_config(
+        tmp_path, [accion_mover(origen, tmp_path / "destino")]
+    )
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+
+    resultado = runner.invoke(
+        app,
+        [
+            "--config",
+            str(config),
+            "explicar",
+            "mover-x",
+            str(tmp_path / "no-existe"),
         ],
     )
 

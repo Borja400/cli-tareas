@@ -126,3 +126,20 @@ def test_motor_carpeta_inexistente(tmp_path: Path) -> None:
         motor.ejecutar("mover-x", tmp_path / "no-existe", True)
 
     assert "no existe" in str(error.value)
+
+
+def test_preparar_no_ejecuta_la_accion(tmp_path: Path) -> None:
+    origen = tmp_path / "origen"
+    destino = tmp_path / "destino"
+    origen.mkdir()
+    fichero = origen / "entrega.pdf"
+    fichero.write_text("contenido", encoding="utf-8")
+    motor = Motor([config_mover(origen, destino)])
+
+    accion, ruta, ficheros = motor.preparar("mover-x", None)
+
+    assert accion.nombre == "mover-x"
+    assert ruta == origen
+    assert [seleccionado.name for seleccionado in ficheros] == ["entrega.pdf"]
+    assert fichero.is_file()
+    assert not destino.exists()

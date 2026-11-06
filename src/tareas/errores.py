@@ -8,7 +8,7 @@ class TareasError(Exception):
 
 
 class ConfigError(TareasError):
-    """acciones.json no existe, no es JSON o no cumple el esquema."""
+    """Falta configuración o acciones.json no es válido."""
 
     codigo_salida = 3
 
