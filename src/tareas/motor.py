@@ -56,13 +56,12 @@ class Motor:
 
         return elegidos
 
-    def ejecutar(
+    def preparar(
         self,
         nombre: str,
         carpeta: Path | None,
-        simular: bool,
-    ) -> list[Resultado]:
-        """Ejecuta una acción por su nombre sobre una carpeta."""
+    ) -> tuple[Accion, Path, list[Path]]:
+        """Busca la acción y selecciona sus ficheros sin ejecutarla."""
         accion = self.acciones.get(nombre)
         if accion is None:
             raise TareasError(
@@ -75,5 +74,14 @@ class Motor:
             raise TareasError(f"La carpeta «{ruta}» no existe o no es una carpeta.")
 
         filtro = accion.config.get("filtro") or {}
-        ficheros = self.seleccionar(ruta, filtro)
+        return accion, ruta, self.seleccionar(ruta, filtro)
+
+    def ejecutar(
+        self,
+        nombre: str,
+        carpeta: Path | None,
+        simular: bool,
+    ) -> list[Resultado]:
+        """Ejecuta una acción por su nombre sobre una carpeta."""
+        accion, _, ficheros = self.preparar(nombre, carpeta)
         return accion.ejecutar(ficheros, simular)

@@ -13,6 +13,7 @@ from tareas import __version__
 from tareas.acciones import Resultado
 from tareas.config import cargar
 from tareas.errores import TareasError
+from tareas.ia import crear_peticion, crear_proveedor
 from tareas.motor import Motor
 
 app = typer.Typer(
@@ -196,6 +197,39 @@ def validar(ctx: typer.Context) -> None:
     """Comprueba acciones.json y dice exactamente qué campo falla."""
     lista = _cargar_config(ctx)
     consola.print(f"[green]OK:[/green] {len(lista)} acciones válidas")
+
+
+@app.command()
+def explicar(
+    ctx: typer.Context,
+    nombre: Annotated[
+        str,
+        typer.Argument(help="Nombre de la acción (ver: tareas acciones)"),
+    ],
+    carpeta: Annotated[
+        Path | None,
+        typer.Argument(help="Carpeta sobre la que actuar"),
+    ] = None,
+) -> None:
+    """Pide a Gemini que explique qué haría una acción, sin ejecutarla."""
+    try:
+        lista = cargar(Path(ctx.obj))
+        motor = Motor(lista)
+        accion, ruta, ficheros = motor.preparar(nombre, carpeta)
+
+        if not ficheros:
+            consola.print("Ningún fichero cumple el filtro; no hay nada que explicar.")
+            return
+
+        resultados = accion.ejecutar(ficheros, simular=True)
+        proveedor = crear_proveedor()
+        peticion = crear_peticion(accion.config, ruta, ficheros, resultados)
+        explicacion = proveedor.explicar(peticion)
+    except TareasError as error:
+        _salir_con_error(error)
+
+    consola.print(f"[bold]Explicación de «{escape(nombre)}»[/bold]")
+    consola.print(escape(explicacion))
 
 
 @app.command()
